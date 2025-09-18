@@ -1,4 +1,4 @@
-# Personality-Stratified with Adaptive Focal Loss for Hard Class Imbalance in Multi-Dimensional Personality Recognition
+# Adaptive Focal Loss with Personality Stratification for Stably Mitigating Hard Class Imbalance in Multi-Dimensional Personality Recognition
 
 
 ## Dataset Details
