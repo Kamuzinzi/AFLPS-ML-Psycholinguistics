@@ -1,13 +1,59 @@
+import sys
+import types
 import torch
 import pandas as pd
 import pickle
 from IPython.display import display
 
+
+def _ensure_numpy_core_alias():
+    if "numpy._core" not in sys.modules:
+        try:
+            import numpy._core  # noqa: F401
+        except ModuleNotFoundError:
+            try:
+                import numpy.core as np_core  # noqa: F401
+            except ModuleNotFoundError:
+                return False
+
+            core_module = types.ModuleType("numpy._core")
+            core_module.__path__ = getattr(np_core, "__path__", [])
+            core_module.__package__ = "numpy._core"
+            if hasattr(np_core, "multiarray"):
+                core_module.multiarray = np_core.multiarray
+            if hasattr(np_core, "_multiarray_umath"):
+                core_module._multiarray_umath = np_core._multiarray_umath
+            if hasattr(np_core, "umath"):
+                core_module.umath = np_core.umath
+            sys.modules["numpy._core"] = core_module
+
+    if "numpy._core.multiarray" not in sys.modules:
+        try:
+            import numpy._core.multiarray  # noqa: F401
+        except ModuleNotFoundError:
+            try:
+                import numpy.core.multiarray as np_multiarray  # noqa: F401
+                sys.modules["numpy._core.multiarray"] = np_multiarray
+            except ModuleNotFoundError:
+                return False
+
+    if "numpy._core._multiarray_umath" not in sys.modules:
+        try:
+            import numpy._core._multiarray_umath  # noqa: F401
+        except ModuleNotFoundError:
+            try:
+                import numpy.core._multiarray_umath as np_multiarray_umath  # noqa: F401
+                sys.modules["numpy._core._multiarray_umath"] = np_multiarray_umath
+            except ModuleNotFoundError:
+                pass
+
+    return True
+
+
 def extract(path):
-    file = open(path,'rb')
-    object_file = pickle.load(file)
-    file.close()
-    return object_file
+    _ensure_numpy_core_alias()
+    with open(path, 'rb') as file:
+        return _NumpyCompatUnpickler(file).load()
 
 def best_device(*args):
     assert len(args)!=0, "@Cannot be empty"
