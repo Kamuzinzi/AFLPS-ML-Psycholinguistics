@@ -139,3 +139,4 @@ Werkzeug @ file:///home/conda/feedstock_root/build_artifacts/werkzeug_1683636301
 widgetsnbextension==4.0.7
 yarl @ file:///Users/runner/miniforge3/conda-bld/yarl_1682426839389/work
 zipp @ file:///home/conda/feedstock_root/build_artifacts/zipp_1677313463193/work
+nltk==3.8.1

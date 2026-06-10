@@ -52,10 +52,51 @@
     ```
 2. Run the script:
     ```bash
-    python train.py
+    python manual_tune.py
     ```
 
+The training run saves a deployment bundle to
+`artifacts/essays_bow_cfbce.pt`. The bundle contains the fitted TF-IDF
+vocabulary, IDF weights, model weights for every personality dimension, and
+training metrics.
 
+The checked-in TF-IDF asset was exported from the same scikit-learn 1.6.1
+environment that generated the merged dataset, so its feature order matches
+the training tensors.
 
+### Predict new text
 
+From the repository root:
+
+```bash
+python model_training/predict.py artifacts/essays_bow_cfbce.pt \
+  --text "I enjoy meeting people, exploring new ideas, and planning projects."
+```
+
+Text can also be piped through standard input:
+
+```bash
+cat sample.txt | python model_training/predict.py artifacts/essays_bow_cfbce.pt
+```
+
+### Serve predictions
+
+```bash
+python model_training/serve.py artifacts/essays_bow_cfbce.pt \
+  --host 0.0.0.0 --port 8000
+```
+
+Health check:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Prediction request:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"text":"I enjoy meeting people and trying unfamiliar activities."}'
+```
 

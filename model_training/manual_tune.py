@@ -7,9 +7,19 @@ os.getcwd()
 
 # import general_module which locate at my parent directory's child
 import sys
-sys.path.append("..")
+from pathlib import Path
+import copy
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT))
 from general_module.evaluation import *
 from general_module.training import *
+from model_training.deployment import (
+    CustomNetwork,
+    load_vectorizer,
+    save_bundle,
+    verify_vectorizer,
+)
 from model_training.loss import *
 
 import pandas as pd
@@ -54,22 +64,6 @@ class CustomDataset(Dataset):
         return len(self.dataframe)
 
 
-# # Part 3 Model Training
-class CustomNetwork(nn.Module):
-    def __init__(self, input_size):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, 5)
-        self.fc2 = nn.Linear(5, 5)
-        self.fc3 = nn.Linear(5, 1)
-        
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))
-        return x
-    
-
-
 def train(loss_function, epochs, trainloader, testloader):
     # get the input_size from trainloader
     in_size= trainloader.dataset[0][0].shape[0]
@@ -80,6 +74,7 @@ def train(loss_function, epochs, trainloader, testloader):
     model = CustomModel(network)
         
     optimizer = torch.optim.Adam(network.parameters(), lr=0.001)
+    best_state = copy.deepcopy(network.state_dict())
 
     for e in range(epochs):
         # a dictionary that store the training loss, test loss, train_size, test_size, TP, FP, TN, FN
@@ -145,7 +140,17 @@ def train(loss_function, epochs, trainloader, testloader):
 
         print(f'[Epoch {e + 1:2d}/{epochs:d}]: train_loss = {train_loss:.4f}, test_loss = {test_loss:.4f}, RA = {regular_accuracy:.4f}, BA: {balanced_accuracy:.4f}, CM:{confusion_matrix}')
 
-        model.update(network, epochs = e+1, ba = balanced_accuracy, ra=regular_accuracy)
+        if regular_accuracy > model.ra:
+            model.update(
+                network,
+                epochs=e + 1,
+                ba=balanced_accuracy,
+                ra=regular_accuracy,
+            )
+            best_state = copy.deepcopy(network.state_dict())
+
+    network.load_state_dict(best_state)
+    model.network = network
     
     return model
 
@@ -154,8 +159,13 @@ def train(loss_function, epochs, trainloader, testloader):
 # # Execution
 
 def run(config):
-    trainset_dataframe = extract("../dataset/merged/"+config["dataset"]+"_train.pickle")
-    testset_dataframe = extract("../dataset/merged/"+config["dataset"]+"_test.pickle")
+    dataset_directory = REPOSITORY_ROOT / "dataset/merged"
+    trainset_dataframe = extract(
+        dataset_directory / f"{config['dataset']}_train.pickle"
+    )
+    testset_dataframe = extract(
+        dataset_directory / f"{config['dataset']}_test.pickle"
+    )
     
     # a dictionary of model on different personality dimension, "O", "C", "E", "A", "N"
     if config["dataset"] =="essays":
@@ -208,16 +218,33 @@ def run(config):
         
         models[dimension] = model
 
+    if config["feature"] != "bow":
+        raise ValueError(
+            "Deployment currently supports feature='bow' because raw-text "
+            "psycholinguistic feature extraction is not included in this repo."
+        )
+
+    print("Rebuilding and verifying the TF-IDF vectorizer...")
+    vectorizer = load_vectorizer(config["dataset"])
+    verify_vectorizer(vectorizer, trainset_dataframe)
+    artifact_path = config.get(
+        "artifact_path",
+        REPOSITORY_ROOT
+        / "artifacts"
+        / f"{config['dataset']}_{config['feature']}_{config['loss']}.pt",
+    )
+    saved_path = save_bundle(artifact_path, models, vectorizer, config)
+    print(f"Saved deployment bundle to {saved_path}")
     return models
 
 config ={
     "dataset":"essays", #mbti, essays
     "feature":"bow", #bow, psycho, bow+psycho
     "loss":"cfbce", #bce, wbces, wbceb, bbces, bbceb, cfbce, wfbceb
-    "epochs":200 #any
+    "epochs":200, #any
+    "artifact_path": REPOSITORY_ROOT / "artifacts/essays_bow_cfbce.pt",
 }
 
-print_results(run(config=config))
-
-
+if __name__ == "__main__":
+    print_results(run(config=config))
 
