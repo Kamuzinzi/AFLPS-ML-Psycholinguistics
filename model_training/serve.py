@@ -2,10 +2,10 @@ import argparse
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from deployment import load_bundle, predict_text
+from deployment import load_bundle, load_networks, predict_text
 
 
-def create_handler(bundle):
+def create_handler(bundle, networks):
     class PredictionHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path == "/health":
@@ -24,7 +24,7 @@ def create_handler(bundle):
                 text = payload["text"]
                 if not isinstance(text, str) or not text.strip():
                     raise ValueError("text must be a non-empty string")
-                result = predict_text(text, bundle)
+                result = predict_text(text, bundle, networks=networks)
                 self._write_json(
                     200,
                     {"dataset": bundle["dataset"], "predictions": result},
@@ -54,9 +54,10 @@ def main():
     args = parser.parse_args()
 
     bundle = load_bundle(args.bundle)
+    networks = load_networks(bundle)
     server = ThreadingHTTPServer(
         (args.host, args.port),
-        create_handler(bundle),
+        create_handler(bundle, networks),
     )
     print(f"Serving predictions at http://{args.host}:{args.port}")
     print("POST JSON to /predict with: {\"text\": \"...\"}")

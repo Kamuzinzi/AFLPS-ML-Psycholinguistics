@@ -190,16 +190,24 @@ def vectorize_text(text, bundle):
     return features
 
 
-def predict_text(text, bundle):
+def load_networks(bundle):
+    networks = {}
+    for dimension in bundle["dimensions"]:
+        network = CustomNetwork(bundle["input_size"])
+        network.load_state_dict(bundle["models"][dimension])
+        network.eval()
+        networks[dimension] = network
+    return networks
+
+
+def predict_text(text, bundle, networks=None):
     features = torch.from_numpy(vectorize_text(text, bundle)).unsqueeze(0)
     threshold = float(bundle.get("threshold", 0.5))
     predictions = {}
+    networks = networks or load_networks(bundle)
 
     with torch.no_grad():
-        for dimension in bundle["dimensions"]:
-            network = CustomNetwork(bundle["input_size"])
-            network.load_state_dict(bundle["models"][dimension])
-            network.eval()
+        for dimension, network in networks.items():
             probability = float(network(features).item())
             predictions[dimension] = {
                 "probability": probability,

@@ -230,7 +230,7 @@ def run(config):
     artifact_path = config.get(
         "artifact_path",
         REPOSITORY_ROOT
-        / "artifacts"
+        / "model_training/artifacts"
         / f"{config['dataset']}_{config['feature']}_{config['loss']}.pt",
     )
     saved_path = save_bundle(artifact_path, models, vectorizer, config)
@@ -242,9 +242,11 @@ config ={
     "feature":"bow", #bow, psycho, bow+psycho
     "loss":"cfbce", #bce, wbces, wbceb, bbces, bbceb, cfbce, wfbceb
     "epochs":200, #any
-    "artifact_path": REPOSITORY_ROOT / "artifacts/essays_bow_cfbce.pt",
+    "artifact_path": (
+        REPOSITORY_ROOT
+        / "model_training/artifacts/essays_bow_cfbce.pt"
+    ),
 }
 
 if __name__ == "__main__":
     print_results(run(config=config))
-

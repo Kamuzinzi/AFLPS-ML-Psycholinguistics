@@ -56,7 +56,7 @@
     ```
 
 The training run saves a deployment bundle to
-`artifacts/essays_bow_cfbce.pt`. The bundle contains the fitted TF-IDF
+`model_training/artifacts/essays_bow_cfbce.pt`. The bundle contains the fitted TF-IDF
 vocabulary, IDF weights, model weights for every personality dimension, and
 training metrics.
 
@@ -69,20 +69,46 @@ the training tensors.
 From the repository root:
 
 ```bash
-python model_training/predict.py artifacts/essays_bow_cfbce.pt \
+python model_training/predict.py model_training/artifacts/essays_bow_cfbce.pt \
   --text "I enjoy meeting people, exploring new ideas, and planning projects."
 ```
 
 Text can also be piped through standard input:
 
 ```bash
-cat sample.txt | python model_training/predict.py artifacts/essays_bow_cfbce.pt
+cat sample.txt | python model_training/predict.py \
+  model_training/artifacts/essays_bow_cfbce.pt
 ```
+
+### Predict a file of texts
+
+For a CSV containing a `text` column:
+
+```bash
+python model_training/predict.py \
+  model_training/artifacts/essays_bow_cfbce.pt \
+  --input texts.csv \
+  --output predictions.csv
+```
+
+For a plain-text file, put one text on each line:
+
+```bash
+python model_training/predict.py \
+  model_training/artifacts/essays_bow_cfbce.pt \
+  --input texts.txt \
+  --output predictions.json
+```
+
+CSV and JSONL inputs retain their original fields. The output adds
+`O_probability`, `O_prediction`, and equivalent columns for every personality
+dimension. Use `--text-column posts` when the input text field has another
+name.
 
 ### Serve predictions
 
 ```bash
-python model_training/serve.py artifacts/essays_bow_cfbce.pt \
+python model_training/serve.py model_training/artifacts/essays_bow_cfbce.pt \
   --host 0.0.0.0 --port 8000
 ```
 
@@ -100,3 +126,25 @@ curl -X POST http://localhost:8000/predict \
   -d '{"text":"I enjoy meeting people and trying unfamiliar activities."}'
 ```
 
+### Upload to Hugging Face
+
+Log in first:
+
+```bash
+huggingface-cli login
+```
+
+Then upload the trained bundle and inference files:
+
+```bash
+python model_training/upload_to_huggingface.py \
+  --repo-id your-username/your-model-name
+```
+
+To create a private model repository:
+
+```bash
+python model_training/upload_to_huggingface.py \
+  --repo-id your-username/your-model-name \
+  --private
+```
