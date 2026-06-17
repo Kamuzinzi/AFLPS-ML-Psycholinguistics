@@ -156,7 +156,10 @@ def save_bundle(path, models, vectorizer, config):
 
 
 def load_bundle(path):
-    bundle = torch.load(Path(path), map_location="cpu")
+    try:
+        bundle = torch.load(Path(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        bundle = torch.load(Path(path), map_location="cpu")
     required = {
         "format_version",
         "input_size",

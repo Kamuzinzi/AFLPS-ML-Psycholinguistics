@@ -1,11 +1,15 @@
 import os
 import gradio as gr
+import nltk
 from huggingface_hub import hf_hub_download
 
 from deployment import load_bundle, load_networks, predict_text
 
 
 MODEL_REPO_ID = "Lily-Trinh/PersonalityTraitsFromText"
+
+nltk.download("wordnet", quiet=True)
+nltk.download("omw-1.4", quiet=True)
 
 model_path = hf_hub_download(
     repo_id=MODEL_REPO_ID,
@@ -18,6 +22,7 @@ networks = load_networks(bundle)
 
 
 def predict(essay):
+    
     if not essay.strip():
         return {"error": "Please enter an essay."}
 
@@ -47,4 +52,4 @@ demo = gr.Interface(
     ),
 )
 
-demo.launch()
+demo.launch(show_error=True)
